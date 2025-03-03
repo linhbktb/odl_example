@@ -8,7 +8,20 @@ module example {
         description "Initial revision of example model";
     }
 
-     rpc hello-world {
+    container example-container {
+        description "A container for example properties";
+
+        leaf name {
+            type string;
+            description "name of person";
+        }
+        leaf value {
+            type string;
+            description "value associated with the name";
+        }
+    }
+
+    rpc hello-world {
         input {
             leaf name {
                 type string;
@@ -17,6 +30,42 @@ module example {
         output {
             leaf greeting {
                 type string;
+            }
+        }
+    }
+
+    // New RPC to add a name
+    rpc add-name {
+        input {
+            leaf name {
+                type string;
+                description "The name to add";
+            }
+            leaf value {
+                type string;
+                description "The value associated with the name";
+            }
+        }
+        output {
+            leaf result {
+                type string;
+                description "Result of the add-name operation";
+            }
+        }
+    }
+
+    // New RPC to get a name
+    rpc get-name {
+        input {
+            leaf name {
+                type string;
+                description "The name to get";
+            }
+        }
+        output {
+            leaf value {
+                type string;
+                description "The value associated with the name";
             }
         }
     }
