@@ -7,6 +7,7 @@
  */
 package org.opendaylight.example.impl;
 
+import com.google.common.util.concurrent.FluentFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -141,4 +142,21 @@ public class ExampleProvider implements ExampleService {
             }
         }, MoreExecutors.directExecutor());
     }
+
+    public ListenableFuture<Optional<ExampleContainer>> getExample() {
+        ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
+        InstanceIdentifier<ExampleContainer> iid = InstanceIdentifier.builder(ExampleContainer.class).build();
+        return transaction.read(LogicalDatastoreType.CONFIGURATION, iid);
+    }
+
+    public ListenableFuture<RpcResult<Void>> addExample(String name, String value) {
+        WriteTransaction transaction = dataBroker.newWriteOnlyTransaction();
+        InstanceIdentifier<ExampleContainer> iid = InstanceIdentifier.builder(ExampleContainer.class).build();
+        ExampleContainer exampleContainer = new ExampleContainerBuilder().setName(name).setValue(value).build();
+        transaction.put(LogicalDatastoreType.CONFIGURATION, iid, exampleContainer);
+        FluentFuture<? extends CommitInfo> commitFuture = transaction.commit();
+        return Futures.transform(commitFuture, commitInfo -> RpcResultBuilder.<Void>success().build(),
+                MoreExecutors.directExecutor());
+    }
+
 }
