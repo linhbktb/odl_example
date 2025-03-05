@@ -7,10 +7,17 @@
  */
 package org.opendaylight.example.cli.commands;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import org.apache.karaf.shell.commands.Command;
 import org.apache.karaf.shell.commands.Option;
 import org.apache.karaf.shell.console.AbstractAction;
+
 import org.opendaylight.example.cli.api.ExampleCliCommands;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +55,25 @@ public class ExampleCliTestCommand extends AbstractAction {
          * Implement how you want the output of the command to be displayed.
          * Below is just an example.
          */
-        final String testMessage = (String) service.testCommand(testArgument);
-        return testMessage;
+        // Gọi triển khai lệnh và lấy ListenableFuture
+        ListenableFuture<String> future = (ListenableFuture<String>) service.testCommand(testArgument);
+
+        // Thêm một callback để xử lý kết quả
+        Futures.addCallback(future, new FutureCallback<String>() {
+            @Override
+            public void onSuccess(String result) {
+                LOG.info("Command executed successfully, result: {}", result);
+                session.getConsole().println(result);
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                LOG.error("Command execution failed", throwable);
+                session.getConsole().println("Command execution failed: " + throwable.getMessage());
+            }
+        }, MoreExecutors.directExecutor());
+
+        // Trả về một thông báo chỉ ra rằng lệnh đang được thực thi bất đồng bộ
+        return "Command is being executed asynchronously. Check logs for the result.";
     }
 }

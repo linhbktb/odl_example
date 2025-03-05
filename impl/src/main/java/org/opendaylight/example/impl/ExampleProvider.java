@@ -111,6 +111,24 @@ public class ExampleProvider implements ExampleService {
         ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
         InstanceIdentifier<ExampleContainer> iid = InstanceIdentifier.builder(ExampleContainer.class).build();
         ListenableFuture<Optional<ExampleContainer>> future = transaction.read(LogicalDatastoreType.CONFIGURATION, iid);
+
+        // Add a callback to print the value of the future
+        Futures.addCallback(future, new FutureCallback<Optional<ExampleContainer>>() {
+            @Override
+            public void onSuccess(Optional<ExampleContainer> result) {
+                if (result.isPresent()) {
+                    LOG.info("Future result: {}", result.get());
+                } else {
+                    LOG.info("Future result: empty");
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable throwable) {
+                LOG.error("Failed to get future result", throwable);
+            }
+        }, MoreExecutors.directExecutor());
+
         return Futures.transform(future, optional -> {
             if (optional.isPresent() && optional.get().getName().equals(input.getName())) {
                 GetNameOutputBuilder outputBuilder = new GetNameOutputBuilder();
