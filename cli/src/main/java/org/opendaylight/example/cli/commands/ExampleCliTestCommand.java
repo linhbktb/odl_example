@@ -22,11 +22,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This is an example class. The class name can be renamed to match the command implementation that it will invoke.
- * Specify command details by updating the fields in the Command annotation below.
+ * This is an example class. The class name can be renamed to match the command
+ * implementation that it will invoke.
+ * Specify command details by updating the fields in the Command annotation
+ * below.
  */
-@Command(name = "test-command", scope = "add the scope of the command, usually project name",
-        description = "add a description for the command")
+@Command(name = "test-command", scope = "add the scope of the command, usually project name")
 public class ExampleCliTestCommand extends AbstractAction {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExampleCliTestCommand.class);
@@ -39,13 +40,11 @@ public class ExampleCliTestCommand extends AbstractAction {
     /**
      * Add the arguments required by the command.
      * Any number of arguments can be added using the Option annotation
-     * The below argument is just an example and should be changed as per your requirements
+     * The below argument is just an example and should be changed as per your
+     * requirements
      */
-    @Option(name = "-tA",
-            aliases = { "--testArgument" },
-            description = "test command argument",
-            required = true,
-            multiValued = false)
+    @Option(name = "-tA", aliases = {
+            "--testArgument" }, description = "test command argument", required = true, multiValued = false)
     private Object testArgument;
 
     @Override

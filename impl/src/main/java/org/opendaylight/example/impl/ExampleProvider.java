@@ -25,15 +25,16 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.AddNameOutput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.AddNameOutputBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.ExampleContainer;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.ExampleContainerBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.ExampleService;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.GetNameInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.GetNameOutput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.GetNameOutputBuilder;
-
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.HelloWorldInput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.HelloWorldOutput;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.HelloWorldOutputBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.example.container.ExampleList;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.example.container.ExampleListBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.example.rev180517.example.container.ExampleListKey;
 
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.common.RpcError;
@@ -60,73 +61,49 @@ public class ExampleProvider implements ExampleService {
         return RpcResultBuilder.success(helloBuilder.build()).buildFuture();
     }
 
-    /**
-     * Method called when the blueprint container is created.
-     */
-    public void init() {
-        LOG.info("ExampleProvider Session Initiated");
-        LOG.info("linhpt21 test change");
-    }
-
-    /**
-     * Method called when the blueprint container is destroyed.
-     */
-    public void close() {
-        LOG.info("ExampleProvider Closed");
-    }
-
-    /**
-     * Method to add a property to the data store.
-     */
-    public void addProperty(String name, String value) {
-        WriteTransaction transaction = dataBroker.newWriteOnlyTransaction();
-        InstanceIdentifier<ExampleContainer> iid = InstanceIdentifier.builder(ExampleContainer.class).build();
-        ExampleContainer exampleContainer = new ExampleContainerBuilder()
-                .setName(name)
-                .setValue(value)
-                .build();
-        transaction.put(LogicalDatastoreType.CONFIGURATION, iid, exampleContainer);
-        transaction.commit().addCallback(new FutureCallback<CommitInfo>() {
-            @Override
-            public void onSuccess(CommitInfo result) {
-                LOG.info("Property added successfully");
-            }
-
-            @Override
-            public void onFailure(Throwable throwable) {
-                LOG.error("Failed to add property", throwable);
-            }
-        }, MoreExecutors.directExecutor());
-    }
-
     @Override
     public ListenableFuture<RpcResult<AddNameOutput>> addName(AddNameInput input) {
-        addProperty(input.getName(), input.getValue());
-        AddNameOutputBuilder outputBuilder = new AddNameOutputBuilder();
-        outputBuilder.setResult("Name added successfully");
-        return RpcResultBuilder.success(outputBuilder.build()).buildFuture();
+        WriteTransaction transaction = dataBroker.newWriteOnlyTransaction();
+        InstanceIdentifier<ExampleList> iid = InstanceIdentifier.builder(ExampleContainer.class)
+                .child(ExampleList.class, new ExampleListKey(input.getName())).build();
+
+        LOG.info("InstanceIdentifier for addName: {}", iid);
+        LOG.info("WriteTransaction for addName: {}", transaction);
+
+        ExampleList exampleList = new ExampleListBuilder().setName(input.getName()).setValue(input.getValue()).build();
+        transaction.put(LogicalDatastoreType.CONFIGURATION, iid, exampleList);
+        FluentFuture<? extends CommitInfo> commitFuture = transaction.commit();
+        return Futures.transform(commitFuture, commitInfo -> {
+            AddNameOutputBuilder outputBuilder = new AddNameOutputBuilder();
+            outputBuilder.setResult("Name added successfully");
+            return RpcResultBuilder.success(outputBuilder.build()).build();
+        }, MoreExecutors.directExecutor());
     }
 
     @Override
     public ListenableFuture<RpcResult<GetNameOutput>> getName(GetNameInput input) {
         ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
-        InstanceIdentifier<ExampleContainer> iid = InstanceIdentifier.builder(ExampleContainer.class).build();
-        ListenableFuture<Optional<ExampleContainer>> future = transaction.read(LogicalDatastoreType.CONFIGURATION, iid);
+        InstanceIdentifier<ExampleList> iid = InstanceIdentifier.builder(ExampleContainer.class)
+                .child(ExampleList.class, new ExampleListKey(input.getName())).build();
 
-        // Add a callback to print the value of the future
-        Futures.addCallback(future, new FutureCallback<Optional<ExampleContainer>>() {
+        LOG.info("InstanceIdentifier for getName: {}", iid);
+        LOG.info("WriteTransaction for getName: {}", transaction);
+
+        ListenableFuture<Optional<ExampleList>> future = transaction.read(LogicalDatastoreType.CONFIGURATION, iid);
+
+        Futures.addCallback(future, new FutureCallback<Optional<ExampleList>>() {
             @Override
-            public void onSuccess(Optional<ExampleContainer> result) {
+            public void onSuccess(Optional<ExampleList> result) {
                 if (result.isPresent()) {
-                    LOG.info("Future result: {}", result.get());
+                    LOG.info("Command executed successfully, result: {}", result.get());
                 } else {
-                    LOG.info("Future result: empty");
+                    LOG.info("Command executed successfully, but no result found");
                 }
             }
 
             @Override
             public void onFailure(Throwable throwable) {
-                LOG.error("Failed to get future result", throwable);
+                LOG.error("Command execution failed", throwable);
             }
         }, MoreExecutors.directExecutor());
 
@@ -143,20 +120,40 @@ public class ExampleProvider implements ExampleService {
         }, MoreExecutors.directExecutor());
     }
 
+    /**
+     * Method called when the blueprint container is created.
+     */
+    public void init() {
+        LOG.info("ExampleProvider Session Initiated");
+        LOG.info("linhpt21 test change");
+    }
+
+    /**
+     * Method called when the blueprint container is destroyed.
+     */
+    public void close() {
+        LOG.info("ExampleProvider Closed");
+    }
+
     public ListenableFuture<Optional<ExampleContainer>> getExample() {
         ReadTransaction transaction = dataBroker.newReadOnlyTransaction();
         InstanceIdentifier<ExampleContainer> iid = InstanceIdentifier.builder(ExampleContainer.class).build();
+        LOG.info("InstanceIdentifier for getExample: {}", iid);
+        LOG.info("WriteTransaction for getExample: {}", transaction);
         return transaction.read(LogicalDatastoreType.CONFIGURATION, iid);
     }
 
     public ListenableFuture<RpcResult<Void>> addExample(String name, String value) {
         WriteTransaction transaction = dataBroker.newWriteOnlyTransaction();
-        InstanceIdentifier<ExampleContainer> iid = InstanceIdentifier.builder(ExampleContainer.class).build();
-        ExampleContainer exampleContainer = new ExampleContainerBuilder().setName(name).setValue(value).build();
-        transaction.put(LogicalDatastoreType.CONFIGURATION, iid, exampleContainer);
+        InstanceIdentifier<ExampleList> iid = InstanceIdentifier.builder(ExampleContainer.class)
+                .child(ExampleList.class, new ExampleListKey(name)).build();
+
+        LOG.info("InstanceIdentifier for getName: {}", iid);
+        LOG.info("WriteTransaction for getName: {}", transaction);
+        ExampleList exampleList = new ExampleListBuilder().setName(name).setValue(value).build();
+        transaction.put(LogicalDatastoreType.CONFIGURATION, iid, exampleList);
         FluentFuture<? extends CommitInfo> commitFuture = transaction.commit();
         return Futures.transform(commitFuture, commitInfo -> RpcResultBuilder.<Void>success().build(),
                 MoreExecutors.directExecutor());
     }
-
 }

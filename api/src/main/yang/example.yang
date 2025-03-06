@@ -1,23 +1,23 @@
-
 module example {
     yang-version 1.1;
     namespace "urn:opendaylight:params:xml:ns:yang:example";
     prefix "example";
 
-    revision "2018-05-17" { // TODO change revision to date of model creation
+    revision "2018-05-17" {
         description "Initial revision of example model";
     }
 
     container example-container {
         description "A container for example properties";
 
-        leaf name {
-            type string;
-            description "name of person";
-        }
-        leaf value {
-            type string;
-            description "value associated with the name";
+        list example-list {
+            key "name";
+            leaf name {
+                type string;
+            }
+            leaf value {
+                type string;
+            }
         }
     }
 
@@ -34,7 +34,6 @@ module example {
         }
     }
 
-    // New RPC to add a name
     rpc add-name {
         input {
             leaf name {
@@ -54,7 +53,6 @@ module example {
         }
     }
 
-    // New RPC to get a name
     rpc get-name {
         input {
             leaf name {
